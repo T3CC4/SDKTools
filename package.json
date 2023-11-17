@@ -1,0 +1,14 @@
+{
+  "name": "sdktools",
+  "displayName": "SDKTools",
+  "version": "1.1.0",
+  "description": "YIMIR's SDK Tools",
+  "gitDependencies": {},
+  "vpmDependencies": {
+    "com.vrchat.avatars": "3.2.0"
+  },
+  "legacyFolders": {},
+  "legacyFiles": {},
+  "localPath": "F:\\VRChatStuff\\New Project\\Packages\\SDKTools",
+  "type": "tool"
+}

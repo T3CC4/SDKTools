@@ -1,0 +1,14 @@
+{
+  "name": "sdktools",
+  "displayName": "SDKTools",
+  "version": "0.0.1",
+  "description": "Describe this Package",
+  "dependencies": {},
+  "gitDependencies": {},
+  "vpmDependencies": {
+    "com.vrchat.avatars": "3.2.1"
+  },
+  "legacyFolders": {},
+  "legacyFiles": {},
+  "localPath": "F:\\VRChatStuff\\New Project\\Packages\\SDKTools"
+}
