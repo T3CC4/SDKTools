@@ -12,7 +12,7 @@ namespace SDKTools
             EditorApplication.delayCall += SetTextureImportSettings;
         }
 
-        private static void SetTextureImportSettings()
+        public static void SetTextureImportSettings()
         {
             string[] textureGuids = AssetDatabase.FindAssets("t:Texture2D", new[] { "Assets" });
 
@@ -50,6 +50,15 @@ namespace SDKTools
             textureImporter.streamingMipmapsPriority = 0;
             AssetDatabase.ImportAsset(textureImporter.assetPath);
             Debug.Log("Streaming mipmaps enabled for texture: " + textureImporter.assetPath);
+        }
+    }
+
+    public class TextureImportEditor : Editor
+    {
+        [MenuItem("VRChat SDK/SDKTools/QoL/Set Texture Settings")]
+        public static void SetTextureSettings()
+        {
+            TextureImportSettings.SetTextureImportSettings();
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿using System.Collections;
+﻿#if UNITY_EDITOR
+#if VRC_SDK_VRCSDK3
+using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -30,3 +32,5 @@ namespace SDKTools
         }
     }
 }
+#endif
+#endif

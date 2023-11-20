@@ -8,7 +8,7 @@ namespace SDKTools
 {
     public class MissingScriptsRemover : Editor
     {
-        [MenuItem("VRChat SDK/SDKTools/Remove Missing Scripts")]
+        [MenuItem("VRChat SDK/SDKTools/QoL/Remove Missing Scripts")]
         public static void RemoveMissingScripts()
         {
             GameObject[] gameObjects = GameObject.FindObjectsOfType<GameObject>();

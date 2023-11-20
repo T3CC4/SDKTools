@@ -12,7 +12,7 @@ namespace SDKTools
             EditorApplication.delayCall += SetAudioImportSettings;
         }
 
-        private static void SetAudioImportSettings()
+        public static void SetAudioImportSettings()
         {
             string[] audioGuids = AssetDatabase.FindAssets("t:AudioClip");
 
@@ -35,13 +35,22 @@ namespace SDKTools
             }
         }
 
-        private void OnPostprocessAudio(AudioClip audioClip)
+        public void OnPostprocessAudio(AudioClip audioClip)
         {
             AudioImporter audioImporter = assetImporter as AudioImporter;
             if (audioImporter.loadInBackground == true) return;
             audioImporter.loadInBackground = true;
             AssetDatabase.ImportAsset(audioImporter.assetPath);
             Debug.Log("Load in Background set to true for audio file: " + audioImporter.assetPath);
+        }
+    }
+
+    public class AudioImportEditor : Editor
+    {
+        [MenuItem("VRChat SDK/SDKTools/QoL/Set Audio Settings")]
+        public static void SetAudioSettings()
+        {
+            AudioImportSettings.SetAudioImportSettings();
         }
     }
 }
