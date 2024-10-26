@@ -30,6 +30,7 @@ namespace SDKTools
                     if (audioImporter.loadInBackground == true) return;
                     audioImporter.loadInBackground = true;
                     AssetDatabase.ImportAsset(audioPath);
+                    AssetDatabase.Refresh();
                     Debug.Log("Load in Background set to true for audio file: " + audioPath);
                 }
             }
@@ -41,6 +42,7 @@ namespace SDKTools
             if (audioImporter.loadInBackground == true) return;
             audioImporter.loadInBackground = true;
             AssetDatabase.ImportAsset(audioImporter.assetPath);
+            AssetDatabase.Refresh();
             Debug.Log("Load in Background set to true for audio file: " + audioImporter.assetPath);
         }
     }

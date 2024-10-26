@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using UnityEngine.Networking;
 using System.Linq;
 using SDKTools;
+using CG.Web.MegaApiClient;
 
 namespace SDKTools
 {
@@ -17,17 +18,16 @@ namespace SDKTools
         private string searchQuery = "";
         private Texture2D image;
 
-        private string version = VersionHandler.Version();
-        private string latestversion = string.Empty;
-
         private bool isEditMode = false;
 
         private bool serverConnected = true;
 
         private Vector2 scrollPosition;
 
-        private string jsonFilePath;
-        private Dictionary<string, List<string>> fileCategories;
+        private static string jsonFilePath;
+        public static Dictionary<string, List<string>> fileCategories;
+
+        private bool addMegaPackage = false;
 
         [MenuItem("VRChat SDK/SDKTools/Import Panel")]
         public static void ShowWindow()
@@ -44,7 +44,6 @@ namespace SDKTools
             MoveFilesToFolder(Path.Combine(Directory.GetCurrentDirectory(), "Packages/SDKTools/Runtime/Imports"), destinationPath);
             LoadFileCategories();
             AssignUncategorizedCategory();
-            latestversion = VersionHandler.GetStringByURL("https://api.SDKTools.repl.co");
             image = EditorGUIUtility.Load("Packages/SDKTools/Runtime/Resources/SDKTools.png") as Texture2D;
         }
 
@@ -53,29 +52,10 @@ namespace SDKTools
             GUILayout.BeginVertical(GUI.skin.box);
             GUILayout.Label(image, GUILayout.Height(225));
             GUILayout.EndVertical();
-            if(!serverConnected)
-            {
-                EditorGUILayout.HelpBox("Sadly there was no connection to the server so we don't know if this version is the latest!", MessageType.Error);
-                if (GUILayout.Button("Download anyways"))
-                {
-                    System.Diagnostics.Process.Start("https://mega.nz/folder/hfUXHTxC#Fxzvh40N2ZXfxU5c42csfA");
-                }
-            }
-            else
-            {
-                if ("v" + version != latestversion)
-                {
-                    EditorGUILayout.HelpBox("Your current version is v\"" + version + "\", the latest is \"" + latestversion + "\" so you have to update!", MessageType.Info);
-                    if (GUILayout.Button("Download"))
-                    {
-                        System.Diagnostics.Process.Start("https://mega.nz/folder/JSc0HbiJ#ZJP3BMLAcepY3PeWmVeUbQ");
-                    }
-                }
-            }
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
             GUILayout.Space(10);
-            searchQuery = GUILayout.TextField(searchQuery, GUI.skin.FindStyle("ToolbarSeachTextField"), GUILayout.Width(200));
-            if (GUILayout.Button("", GUI.skin.FindStyle("ToolbarSeachCancelButton")))
+            searchQuery = GUILayout.TextField(searchQuery, EditorStyles.toolbarSearchField, GUILayout.Width(200));
+            if (GUILayout.Button("X", EditorStyles.toolbarButton))
             {
                 searchQuery = "";
                 GUI.FocusControl(null);
@@ -92,19 +72,45 @@ namespace SDKTools
             }
             if(GUILayout.Button("Add Package", EditorStyles.toolbarButton, GUILayout.Width(90)))
             {
-                string filePath = EditorUtility.OpenFilePanel("Select Unity Package", "", "unitypackage");
-                if (!string.IsNullOrEmpty(filePath))
-                {
-                    string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                    string destinationPath = Path.Combine(appDataPath, "SDKTools");
-                    string fileName = Path.GetFileNameWithoutExtension(filePath);
-                    File.Copy(filePath, Path.Combine(destinationPath, fileName + ".unitypackage"), true);
-                    AssignUncategorizedCategory();
-                }
+                //if (EditorUtility.DisplayDialog("Add Package", "Add package from PC or Mega.nz?", "PC", "Mega.nz"))
+                //{
+                    string filePath = EditorUtility.OpenFilePanel("Select Unity Package", "", "unitypackage");
+                    if (!string.IsNullOrEmpty(filePath))
+                    {
+                        string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                        string destinationPath = Path.Combine(appDataPath, "SDKTools");
+                        string fileName = Path.GetFileNameWithoutExtension(filePath);
+                        File.Copy(filePath, Path.Combine(destinationPath, fileName + ".unitypackage"), true);
+                        AssignUncategorizedCategory();
+                    }
+                //}
+                //else
+                //{
+                //    addMegaPackage = true;
+                //}
             }
             GUILayout.Space(10);
             EditorGUILayout.EndHorizontal();
 
+            EditorGUILayout.Space();
+            if (addMegaPackage)
+            {
+                string megaLink = EditorGUILayout.TextField("Mega.nz Link:", "");
+                string packageName = EditorGUILayout.TextField("Package Name:", "");
+                string category = EditorGUILayout.TextField("Category:", "");
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Save"))
+                {
+                    AssignCategoryMega(megaLink, packageName, category);
+                    addMegaPackage = false;
+                }
+                if(GUILayout.Button("Cancel"))
+                {
+                    addMegaPackage = false;
+                }
+                EditorGUILayout.EndHorizontal();
+            }
+            EditorGUILayout.Space();
             ListFilesByCategories();         
         }
 
@@ -150,65 +156,103 @@ namespace SDKTools
             {
                 scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
 
+                // Kopie der Kategorien, um Modifikationen zu vermeiden
                 var categoriesCopy = new Dictionary<string, List<string>>(fileCategories);
 
-                for (int i = 0; i < categoriesCopy.Count; i++)
+                foreach (var category in categoriesCopy)
                 {
+                    string categoryName = category.Key;
+
+                    // Filtere Dateien, die zur Suchanfrage passen
+                    var matchingFiles = category.Value
+                        .Where(filePath => string.IsNullOrEmpty(searchQuery) || filePath.ToLower().Contains(searchQuery.ToLower()))
+                        .ToList();
+
+                    // Überspringe Kategorie, wenn keine Dateien zur Suchanfrage passen
+                    if (matchingFiles.Count == 0)
+                        continue;
+
                     GUI.backgroundColor = new Color(0.75f, 0.75f, 0.75f);
                     GUILayout.BeginVertical(GUI.skin.box);
 
-                    var category = categoriesCopy.ElementAt(i);
-                    string categoryName = category.Key;
-
                     EditorGUILayout.LabelField(categoryName, EditorStyles.boldLabel);
 
-                    if (category.Value == null)
-                    {
-                        EditorGUILayout.LabelField("No files in this category");
-                        continue;
-                    }
-
-                    var filePathsCopy = new List<string>(category.Value);
                     bool isDark = false;
-                    for (int e = 0; e < filePathsCopy.Count; e++)
+                    foreach (var filePath in matchingFiles)
                     {
                         fileAmount++;
-                        string filePath = filePathsCopy[e];
-                        if (string.IsNullOrEmpty(searchQuery) || filePath.ToLower().Contains(searchQuery.ToLower()))
-                        {
-                            string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                            string destinationPath = Path.Combine(appDataPath, "SDKTools/");
+                        string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                        string destinationPath = Path.Combine(appDataPath, "SDKTools/");
 
-                            if (isEditMode)
+                        if (isEditMode)
+                        {
+                            EditorGUILayout.BeginHorizontal();
+                            if (!filePath.Contains("|"))
                             {
-                                EditorGUILayout.BeginHorizontal();
                                 EditorGUILayout.LabelField(filePath);
-                                okok[e + filePathsCopy.Count + 232] = EditorGUILayout.TextField(okok[e + filePathsCopy.Count + 232]);
+
+                                // Begin checking for changes in the input field
+                                EditorGUI.BeginChangeCheck();
+                                okok[fileAmount] = EditorGUILayout.TextField(okok[fileAmount]);
                                 if (GUILayout.Button("Save", GUILayout.Width(80)))
                                 {
-                                    MoveFileToCategory(filePath, categoryName, okok[e + filePathsCopy.Count + 232]);
+                                    MoveFileToCategory(filePath, categoryName, okok[fileAmount]);
                                 }
+
                                 if (GUILayout.Button("Delete", GUILayout.Width(60)))
                                 {
                                     File.Delete(destinationPath + filePath);
                                     LoadFileCategories();
                                     AssignUncategorizedCategory();
                                 }
-                                EditorGUILayout.EndHorizontal();
                             }
                             else
                             {
-                                if (isDark)
-                                    GUI.backgroundColor = new Color(0.75f, 0.75f, 0.75f); // Darker color
-                                else
-                                    GUI.backgroundColor = Color.white; // Lighter color
+                                string[] packaginfo = filePath.Split('|');
+                                EditorGUILayout.LabelField(packaginfo[0] + " (from Mega.nz)");
 
-                                isDark = !isDark; // Toggle isDark variable
+                                okok[fileAmount] = EditorGUILayout.TextField(okok[fileAmount]);
+                                if (GUILayout.Button("Save", GUILayout.Width(80)))
+                                {
+                                    MoveFileToCategory(filePath, categoryName, okok[fileAmount]);
+                                }
 
-                                string fileName = Path.GetFileNameWithoutExtension(filePath); // Get file name without extension
+                                if (GUILayout.Button("Delete", GUILayout.Width(60)))
+                                {
+                                    File.Delete(destinationPath + filePath);
+                                    LoadFileCategories();
+                                    AssignUncategorizedCategory();
+                                }
+                            }
+                            EditorGUILayout.EndHorizontal();
+                        }
+                        else
+                        {
+                            GUI.backgroundColor = isDark ? new Color(0.75f, 0.75f, 0.75f) : Color.white;
+                            isDark = !isDark;
+
+                            if (!filePath.Contains("|"))
+                            {
+                                string fileName = Path.GetFileNameWithoutExtension(filePath);
                                 if (GUILayout.Button(fileName))
                                 {
                                     AssetDatabase.ImportPackage(destinationPath + filePath, true);
+                                }
+                            }
+                            else
+                            {
+                                string[] packaginfo = filePath.Split('|');
+                                if (GUILayout.Button(packaginfo[0] + " (from Mega.nz)"))
+                                {
+                                    if (packaginfo.Length <= 3)
+                                    {
+                                        while (!MegaAPI.DownloadFile(packaginfo)) { }
+                                        AssetDatabase.ImportPackage(destinationPath + packaginfo[3], true);
+                                    }
+                                    else
+                                    {
+                                        AssetDatabase.ImportPackage(destinationPath + packaginfo[3], true);
+                                    }
                                 }
                             }
                         }
@@ -271,6 +315,20 @@ namespace SDKTools
                 // Create a new dictionary if the file doesn't exist
                 fileCategories = new Dictionary<string, List<string>>();
             }
+        }
+
+        private void AssignCategoryMega(string megaLink, string packageName, string category)
+        {
+            // Check if the specified category already exists
+            if (!fileCategories.ContainsKey(category))
+            {
+                fileCategories[category] = new List<string>();
+            }
+
+            fileCategories[category].Add($"{packageName}|{megaLink}|{category}");
+
+            // Save the updated categories to JSON
+            SaveCategoriesToJson();
         }
 
 
@@ -339,7 +397,7 @@ namespace SDKTools
             SaveCategoriesToJson();
         }
 
-        private void SaveCategoriesToJson()
+        public static void SaveCategoriesToJson()
         {
             string json = JsonConvert.SerializeObject(fileCategories, Formatting.Indented);
             File.WriteAllText(jsonFilePath, json);

@@ -34,6 +34,7 @@ namespace SDKTools
                     textureImporter.streamingMipmaps = true;
                     textureImporter.streamingMipmapsPriority = 0;
                     AssetDatabase.ImportAsset(texturePath);
+                    AssetDatabase.Refresh();
                     Debug.Log("Streaming mipmaps enabled for texture: " + texturePath);
                 }
             }
@@ -49,6 +50,7 @@ namespace SDKTools
             textureImporter.streamingMipmaps = true;
             textureImporter.streamingMipmapsPriority = 0;
             AssetDatabase.ImportAsset(textureImporter.assetPath);
+            AssetDatabase.Refresh();
             Debug.Log("Streaming mipmaps enabled for texture: " + textureImporter.assetPath);
         }
     }
